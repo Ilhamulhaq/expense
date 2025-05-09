@@ -3,6 +3,7 @@ class ExpenseTracker {
         this.expenses = JSON.parse(localStorage.getItem('expenses')) || [];
         this.recognition = null;
         this.isRecording = false;
+        this.lastDeletedExpense = null;
         this.setupVoiceRecognition();
         this.setupEventListeners();
         this.updateExpensesList();
@@ -37,9 +38,11 @@ class ExpenseTracker {
     setupEventListeners() {
         const startButton = document.getElementById('startRecording');
         const clearButton = document.getElementById('clearExpenses');
+        const undoButton = document.getElementById('undoDelete');
         
         startButton.addEventListener('click', () => this.toggleRecording());
         clearButton.addEventListener('click', () => this.clearExpenses());
+        undoButton.addEventListener('click', () => this.undoLastDelete());
     }
 
     toggleRecording() {
@@ -147,6 +150,8 @@ class ExpenseTracker {
             deleteButton.title = 'Delete expense';
             deleteButton.onclick = () => {
                 if (confirm('Are you sure you want to delete this expense?')) {
+                    // Store the expense before deleting
+                    this.lastDeletedExpense = expense;
                     // Remove from expenses array
                     const index = this.expenses.findIndex(e => e.id === expense.id);
                     if (index !== -1) {
@@ -157,6 +162,8 @@ class ExpenseTracker {
                         expenseElement.remove();
                         // Update total
                         this.updateTotal();
+                        // Enable undo button
+                        document.getElementById('undoDelete').disabled = false;
                     }
                 }
             };
@@ -174,6 +181,22 @@ class ExpenseTracker {
 
     saveExpenses() {
         localStorage.setItem('expenses', JSON.stringify(this.expenses));
+    }
+
+    undoLastDelete() {
+        if (this.lastDeletedExpense) {
+            // Add the last deleted expense back to the array
+            this.expenses.push(this.lastDeletedExpense);
+            // Update localStorage
+            this.saveExpenses();
+            // Update the UI
+            this.updateExpensesList();
+            this.updateTotal();
+            // Clear the last deleted expense
+            this.lastDeletedExpense = null;
+            // Disable undo button
+            document.getElementById('undoDelete').disabled = true;
+        }
     }
 }
 
