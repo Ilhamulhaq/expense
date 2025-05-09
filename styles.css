@@ -84,6 +84,18 @@ h2 {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: background-color 0.2s;
+}
+
+.expense-item:hover {
+    background-color: #e9ecef;
+}
+
+.expense-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
 }
 
 .expense-item .description {
@@ -101,6 +113,22 @@ h2 {
     border-radius: 15px;
     font-size: 14px;
     color: #3498db;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    padding: 5px 10px;
+    font-size: 1.2em;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    margin-left: 10px;
+}
+
+.delete-btn:hover {
+    background-color: #ffebee;
 }
 
 .summary {
