@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Controlled Expense Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Voice-Controlled Expense Tracker</h1>
+        
+        <div class="voice-control">
+            <button id="startRecording" class="record-btn">
+                <span class="mic-icon">🎤</span>
+                Start Recording
+            </button>
+            <div id="recordingStatus" class="recording-status"></div>
+        </div>
+
+        <div class="expenses-list">
+            <h2>Expenses</h2>
+            <div id="expensesList"></div>
+        </div>
+
+        <div class="summary">
+            <h2>Summary</h2>
+            <div id="totalExpenses">Total: $0.00</div>
+            <button id="clearExpenses" class="clear-btn">Clear All Expenses</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

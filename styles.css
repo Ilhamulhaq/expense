@@ -1,0 +1,146 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 30px;
+}
+
+.voice-control {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.record-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+}
+
+.record-btn:hover {
+    background: #2980b9;
+    transform: scale(1.05);
+}
+
+.record-btn.recording {
+    background: #e74c3c;
+    animation: pulse 1.5s infinite;
+}
+
+.mic-icon {
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+.recording-status {
+    margin-top: 10px;
+    color: #666;
+    font-style: italic;
+}
+
+.expenses-list {
+    margin-bottom: 30px;
+}
+
+h2 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.expense-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.expense-item .description {
+    font-weight: 500;
+}
+
+.expense-item .amount {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.expense-item .category {
+    background: #e8f4f8;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    color: #3498db;
+}
+
+.summary {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: right;
+}
+
+#totalExpenses {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.clear-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+    background: #c0392b;
+    transform: scale(1.05);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
