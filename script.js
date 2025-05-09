@@ -130,11 +130,39 @@ class ExpenseTracker {
         this.expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(expense => {
             const expenseElement = document.createElement('div');
             expenseElement.className = 'expense-item';
-            expenseElement.innerHTML = `
+            
+            // Create expense content
+            const expenseContent = document.createElement('div');
+            expenseContent.className = 'expense-content';
+            expenseContent.innerHTML = `
                 <div class="description">${expense.description}</div>
                 <div class="category">${expense.category}</div>
                 <div class="amount">$${expense.amount.toFixed(2)}</div>
             `;
+            
+            // Create delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-btn';
+            deleteButton.innerHTML = '🗑️';
+            deleteButton.title = 'Delete expense';
+            deleteButton.onclick = () => {
+                if (confirm('Are you sure you want to delete this expense?')) {
+                    // Remove from expenses array
+                    const index = this.expenses.findIndex(e => e.id === expense.id);
+                    if (index !== -1) {
+                        this.expenses.splice(index, 1);
+                        // Update localStorage
+                        this.saveExpenses();
+                        // Remove from DOM
+                        expenseElement.remove();
+                        // Update total
+                        this.updateTotal();
+                    }
+                }
+            };
+            
+            expenseElement.appendChild(expenseContent);
+            expenseElement.appendChild(deleteButton);
             expensesList.appendChild(expenseElement);
         });
     }
