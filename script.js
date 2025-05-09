@@ -4,10 +4,89 @@ class ExpenseTracker {
         this.recognition = null;
         this.isRecording = false;
         this.lastDeletedExpense = null;
+        this.tabCounter = 1;
+        this.tabContents = new Map();
         this.setupVoiceRecognition();
         this.setupEventListeners();
-        this.updateExpensesList();
-        this.updateTotal();
+        this.loadTabs();
+    }
+
+    loadTabs() {
+        // Load saved tabs from localStorage
+        const savedTabs = JSON.parse(localStorage.getItem('expenseTabs')) || [];
+        
+        if (savedTabs.length === 0) {
+            // If no saved tabs, create first tab with empty expenses
+            this.initializeFirstTab();
+        } else {
+            // Clear existing tabs
+            const tabsList = document.getElementById('tabsList');
+            tabsList.innerHTML = '';
+            
+            // Restore saved tabs
+            savedTabs.forEach((tabData, index) => {
+                const tabId = `tab${index + 1}`;
+                this.tabCounter = index + 1;
+                
+                // Create tab element
+                const tab = document.createElement('div');
+                tab.className = 'tab';
+                if (index === 0) tab.classList.add('active');
+                tab.dataset.tab = tabId;
+                tab.innerHTML = `
+                    <span class="tab-title">${tabData.title}</span>
+                    <button class="close-tab">×</button>
+                `;
+                
+                tabsList.appendChild(tab);
+                this.tabContents.set(tabId, tabData.expenses);
+            });
+            
+            // Show first tab's content
+            const firstTabId = 'tab1';
+            this.updateExpensesList(firstTabId);
+            this.updateTabSummary(firstTabId);
+        }
+    }
+
+    initializeFirstTab() {
+        // Clear any existing tabs
+        const tabsList = document.getElementById('tabsList');
+        tabsList.innerHTML = '';
+        
+        // Ask for first tab name
+        const tabName = prompt('Enter name for your first tab:', 'Expenses');
+        if (tabName === null) {
+            // If user cancels, use default name
+            tabName = 'Expenses';
+        }
+        
+        // Create first tab
+        const tabId = 'tab1';
+        const tab = document.createElement('div');
+        tab.className = 'tab active';
+        tab.dataset.tab = tabId;
+        tab.innerHTML = `
+            <span class="tab-title">${tabName}</span>
+            <button class="close-tab">×</button>
+        `;
+        
+        tabsList.appendChild(tab);
+        this.tabContents.set(tabId, []);
+        this.updateExpensesList(tabId);
+        this.updateTabSummary(tabId);
+        this.saveTabs();
+    }
+
+    saveTabs() {
+        const tabsData = Array.from(this.tabContents.entries()).map(([tabId, expenses], index) => {
+            const tabElement = document.querySelector(`.tab[data-tab="${tabId}"]`);
+            return {
+                title: tabElement.querySelector('.tab-title').textContent,
+                expenses: expenses
+            };
+        });
+        localStorage.setItem('expenseTabs', JSON.stringify(tabsData));
     }
 
     setupVoiceRecognition() {
@@ -39,10 +118,24 @@ class ExpenseTracker {
         const startButton = document.getElementById('startRecording');
         const clearButton = document.getElementById('clearExpenses');
         const undoButton = document.getElementById('undoDelete');
+        const newTabButton = document.getElementById('newTabBtn');
+        const tabsList = document.getElementById('tabsList');
         
         startButton.addEventListener('click', () => this.toggleRecording());
         clearButton.addEventListener('click', () => this.clearExpenses());
         undoButton.addEventListener('click', () => this.undoLastDelete());
+        
+        // Tab functionality
+        newTabButton.addEventListener('click', () => this.createNewTab());
+        
+        // Event delegation for tab clicks and close buttons
+        tabsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab')) {
+                this.switchTab(e.target);
+            } else if (e.target.classList.contains('close-tab')) {
+                this.closeTab(e.target.parentElement);
+            }
+        });
     }
 
     toggleRecording() {
@@ -74,22 +167,18 @@ class ExpenseTracker {
     processVoiceCommand(transcript) {
         console.log('Transcript:', transcript);
         
-        // Extract amount using regex
         const amountMatch = transcript.match(/\$?(\d+(?:\.\d{1,2})?)/);
         const amount = amountMatch ? parseFloat(amountMatch[1]) : null;
 
-        // Extract category
         const categories = ['food', 'transport', 'utilities', 'entertainment', 'other'];
         const category = categories.find(cat => transcript.includes(cat)) || 'other';
 
-        // Extract description (remove amount and category from transcript)
         let description = transcript
             .replace(/\$?\d+(?:\.\d{1,2})?/, '')
             .replace(category, '')
             .trim();
 
         if (amount) {
-            // Automatically add the expense when voice command is processed
             const expense = {
                 id: Date.now(),
                 description: description || 'Voice expense',
@@ -98,12 +187,16 @@ class ExpenseTracker {
                 date: new Date().toISOString()
             };
 
-            this.expenses.push(expense);
-            this.saveExpenses();
-            this.updateExpensesList();
-            this.updateTotal();
+            const activeTab = document.querySelector('.tab.active');
+            const tabId = activeTab.dataset.tab;
+            const tabExpenses = this.tabContents.get(tabId) || [];
+            tabExpenses.push(expense);
+            this.tabContents.set(tabId, tabExpenses);
             
-            // Show confirmation message
+            this.updateExpensesList(tabId);
+            this.updateTabSummary(tabId);
+            this.saveTabs();
+            
             document.getElementById('recordingStatus').textContent = `Added: $${amount} for ${category}`;
             setTimeout(() => {
                 document.getElementById('recordingStatus').textContent = '';
@@ -114,11 +207,13 @@ class ExpenseTracker {
     }
 
     clearExpenses() {
-        if (confirm('Are you sure you want to clear all expenses?')) {
-            this.expenses = [];
-            this.saveExpenses();
-            this.updateExpensesList();
-            this.updateTotal();
+        if (confirm('Are you sure you want to clear all expenses in the current tab?')) {
+            const activeTab = document.querySelector('.tab.active');
+            const tabId = activeTab.dataset.tab;
+            this.tabContents.set(tabId, []);
+            this.updateExpensesList(tabId);
+            this.updateTabSummary(tabId);
+            this.saveTabs();
             document.getElementById('recordingStatus').textContent = 'All expenses cleared';
             setTimeout(() => {
                 document.getElementById('recordingStatus').textContent = '';
@@ -126,56 +221,54 @@ class ExpenseTracker {
         }
     }
 
-    updateExpensesList() {
+    updateExpensesList(tabId) {
         const expensesList = document.getElementById('expensesList');
         expensesList.innerHTML = '';
 
-        this.expenses.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(expense => {
-            const expenseElement = document.createElement('div');
-            expenseElement.className = 'expense-item';
-            
-            // Create expense content
-            const expenseContent = document.createElement('div');
-            expenseContent.className = 'expense-content';
-            expenseContent.innerHTML = `
-                <div class="description">${expense.description}</div>
-                <div class="category">${expense.category}</div>
-                <div class="amount">$${expense.amount.toFixed(2)}</div>
-            `;
-            
-            // Create delete button
-            const deleteButton = document.createElement('button');
-            deleteButton.className = 'delete-btn';
-            deleteButton.innerHTML = '🗑️';
-            deleteButton.title = 'Delete expense';
-            deleteButton.onclick = () => {
-                if (confirm('Are you sure you want to delete this expense?')) {
-                    // Store the expense before deleting
-                    this.lastDeletedExpense = expense;
-                    // Remove from expenses array
-                    const index = this.expenses.findIndex(e => e.id === expense.id);
-                    if (index !== -1) {
-                        this.expenses.splice(index, 1);
-                        // Update localStorage
-                        this.saveExpenses();
-                        // Remove from DOM
-                        expenseElement.remove();
-                        // Update total
-                        this.updateTotal();
-                        // Enable undo button
-                        document.getElementById('undoDelete').disabled = false;
+        const tabExpenses = this.tabContents.get(tabId) || [];
+        
+        tabExpenses
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .forEach(expense => {
+                const expenseElement = document.createElement('div');
+                expenseElement.className = 'expense-item';
+                
+                const expenseContent = document.createElement('div');
+                expenseContent.className = 'expense-content';
+                expenseContent.innerHTML = `
+                    <div class="description">${expense.description}</div>
+                    <div class="category">${expense.category}</div>
+                    <div class="amount">$${expense.amount.toFixed(2)}</div>
+                `;
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'delete-btn';
+                deleteButton.innerHTML = '🗑️';
+                deleteButton.title = 'Delete expense';
+                deleteButton.onclick = () => {
+                    if (confirm('Are you sure you want to delete this expense?')) {
+                        this.lastDeletedExpense = expense;
+                        const index = tabExpenses.findIndex(e => e.id === expense.id);
+                        if (index !== -1) {
+                            tabExpenses.splice(index, 1);
+                            this.tabContents.set(tabId, tabExpenses);
+                            expenseElement.remove();
+                            this.updateTabSummary(tabId);
+                            document.getElementById('undoDelete').disabled = false;
+                            this.saveTabs();
+                        }
                     }
-                }
-            };
-            
-            expenseElement.appendChild(expenseContent);
-            expenseElement.appendChild(deleteButton);
-            expensesList.appendChild(expenseElement);
-        });
+                };
+                
+                expenseElement.appendChild(expenseContent);
+                expenseElement.appendChild(deleteButton);
+                expensesList.appendChild(expenseElement);
+            });
     }
 
-    updateTotal() {
-        const total = this.expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    updateTabSummary(tabId) {
+        const tabExpenses = this.tabContents.get(tabId) || [];
+        const total = tabExpenses.reduce((sum, expense) => sum + expense.amount, 0);
         document.getElementById('totalExpenses').textContent = `Total: $${total.toFixed(2)}`;
     }
 
@@ -185,18 +278,88 @@ class ExpenseTracker {
 
     undoLastDelete() {
         if (this.lastDeletedExpense) {
-            // Add the last deleted expense back to the array
-            this.expenses.push(this.lastDeletedExpense);
-            // Update localStorage
-            this.saveExpenses();
-            // Update the UI
-            this.updateExpensesList();
-            this.updateTotal();
-            // Clear the last deleted expense
+            const activeTab = document.querySelector('.tab.active');
+            const tabId = activeTab.dataset.tab;
+            const tabExpenses = this.tabContents.get(tabId) || [];
+            tabExpenses.push(this.lastDeletedExpense);
+            this.tabContents.set(tabId, tabExpenses);
+            this.updateExpensesList(tabId);
+            this.updateTabSummary(tabId);
+            this.saveTabs();
             this.lastDeletedExpense = null;
-            // Disable undo button
             document.getElementById('undoDelete').disabled = true;
         }
+    }
+
+    addExpenseFromForm() {
+        const amount = parseFloat(document.getElementById('expenseAmount').value);
+        const category = document.getElementById('expenseCategory').value;
+        const description = document.getElementById('expenseDescription').value;
+
+        if (amount && category && description) {
+            const expense = {
+                id: Date.now(),
+                amount,
+                category,
+                description,
+                date: new Date().toISOString()
+            };
+
+            this.expenses.push(expense);
+            this.saveExpenses();
+            this.updateExpensesList();
+            this.updateTabSummary();
+
+            // Reset form
+            document.getElementById('addExpenseForm').reset();
+        }
+    }
+
+    createNewTab() {
+        const tabName = prompt('Enter tab name:', `New Tab ${this.tabCounter}`);
+        if (tabName === null) return; // User cancelled the prompt
+        
+        this.tabCounter++;
+        const tabId = `tab${this.tabCounter}`;
+        const tab = document.createElement('div');
+        tab.className = 'tab';
+        tab.dataset.tab = tabId;
+        tab.innerHTML = `
+            <span class="tab-title">${tabName}</span>
+            <button class="close-tab">×</button>
+        `;
+        
+        document.getElementById('tabsList').appendChild(tab);
+        this.tabContents.set(tabId, []); // Initialize empty list for new tab
+        this.switchTab(tab);
+        this.saveTabs();
+    }
+
+    switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const tabId = tab.dataset.tab;
+        this.updateExpensesList(tabId);
+        this.updateTabSummary(tabId);
+    }
+
+    closeTab(tab) {
+        if (document.querySelectorAll('.tab').length === 1) {
+            return;
+        }
+        
+        const tabId = tab.dataset.tab;
+        
+        if (tab.classList.contains('active')) {
+            const prevTab = tab.previousElementSibling || tab.nextElementSibling;
+            if (prevTab) {
+                this.switchTab(prevTab);
+            }
+        }
+        
+        this.tabContents.delete(tabId);
+        tab.remove();
+        this.saveTabs();
     }
 }
 
